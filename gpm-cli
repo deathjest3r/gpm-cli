@@ -1,0 +1,127 @@
+#!/usr/bin/env python
+
+# This file is part of the gpm-cli.
+#
+# Copyright (C) 2013 Death Jester <d3ath.jest3r@gmail.com>
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
+
+import sys
+import os
+import argparse
+import getpass
+import subprocess
+import cPickle as pickle
+from requests import ConnectionError
+from gmusicapi import Api
+
+class GPM:
+    library = []
+    api = None
+
+    def __init__(self):
+        self.api = self.login(self.load_config())
+        self.library = self.open_library()
+
+    def login(self, config):
+        # Do the login procedure
+        while True:
+            try:
+                api = Api()
+                if api.login(config['login'], config['password'], \
+                        perform_upload_auth = False):
+                    return api # Succesfully logged in  
+                else:
+                    print "Sorry, try again."
+                    raise KeyError('login')
+            except KeyError as e:
+                try:
+                    if e.args[0] == "login":
+                        config['login'] = raw_input("Login: ")
+                        config['password'] = getpass.getpass()
+                        continue
+                    if e.args[0] == "password":
+                        config['password'] = getpass.getpass()
+                        continue
+                    else:
+                        break
+                except KeyboardInterrupt:
+                    sys.exit(0)
+            except ConnectionError:
+                print "Not able to connect to the Google service, check your"
+                print "internet connection..."
+                sys.exit(0)
+
+
+    def open_library(self):
+        try:
+            # Try to open the local library if it exists
+            local_lib = pickle.load(\
+                    open(os.path.expanduser("~/.gpm/library.db"), "rb"))
+            return local_lib
+        except IOError: # Otherwise raise an exception and load the online lib
+            online_lib = self.api.get_all_songs()
+            pickle.dump( online_lib, \
+                    open(os.path.expanduser("~/.gpm/library.db"), "wb"))
+            return online_lib
+
+    def play(self, title):
+        track  = [track for track in self.library if track['title'] == title]
+        stream_url = self.api.get_stream_url(track[0]['id'])
+        with open(os.devnull, 'w') as temp:
+            proc = subprocess.Popen(["mplayer", "-noconfig", "all", "%s" % stream_url])
+            return proc
+    
+    def db_connect(self):
+        library = shelve.open(os.path.expanduser("~/.gpm/library.db"))
+
+
+    def load_config(self):
+        config = dict()
+        try:
+            with open(os.path.expanduser("~/.gpmrc")) as f:
+                lines = f.readlines()
+                for line in lines:
+                    words = line.split()
+                    if words[0] == 'login':
+                        config['login'] = words[1]
+                    elif words[0] == 'password':
+                        config['password'] = words[1]
+        except IOError:
+            pass
+        return config
+
+    def search(self, search):
+        pass
+
+def main():
+    gpm = GPM()    
+
+    parser = argparse.ArgumentParser(description =
+            'Command line interface to Google\'s Play Music service')
+
+    parser.add_argument('--cached')
+    parser.add_argument('--play')
+    parser.add_argument('--search')
+
+    args = parser.parse_args()
+    for opt, arg in vars(args).iteritems():
+        if opt == "play":
+            gpm.play(arg)
+        elif opt == 'cached':
+            pass
+
+if __name__ == "__main__":
+    main()
