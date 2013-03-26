@@ -73,6 +73,13 @@ class GPM:
             return local_lib
         except IOError: # Otherwise raise an exception and load the online lib
             online_lib = self.api.get_all_songs()
+            
+            try:
+                os.makedirs(os.path.expanduser("~/.gpm"))
+            except OSError as e:
+                if e.errno != errno.EEXIST:
+                    raise
+
             pickle.dump( online_lib, \
                     open(os.path.expanduser("~/.gpm/library.db"), "wb"))
             return online_lib
@@ -80,8 +87,10 @@ class GPM:
     def play(self, title):
         track  = [track for track in self.library if track['title'] == title]
         stream_url = self.api.get_stream_url(track[0]['id'])
+        print stream_url
         with open(os.devnull, 'w') as temp:
-            proc = subprocess.Popen(["mplayer", "-noconfig", "all", "%s" % stream_url])
+            proc = subprocess.Popen(["mplayer", "-ao", "alsa:device=hw=1.0", \
+                    "%s" % stream_url])
             return proc
     
     def db_connect(self):
