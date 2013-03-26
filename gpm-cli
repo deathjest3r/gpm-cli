@@ -20,9 +20,11 @@
 
 import sys
 import os
-import argparse
+#import argparse
+from optparse import OptionParser
 import getpass
 import subprocess
+import textwrap
 import cPickle as pickle
 from requests import ConnectionError
 from gmusicapi import Api
@@ -60,8 +62,8 @@ class GPM:
                 except KeyboardInterrupt:
                     sys.exit(0)
             except ConnectionError:
-                print "Not able to connect to the Google service, check your"
-                print "internet connection..."
+                print("Not able to connect to the Google service, check your"
+                        "internet connection...")
                 sys.exit(0)
 
 
@@ -86,17 +88,22 @@ class GPM:
 
     def play(self, title):
         track  = [track for track in self.library if track['title'] == title]
-        stream_url = self.api.get_stream_url(track[0]['id'])
-        print stream_url
+        if len(track) > 1:
+            print("More than one title with this name, please "
+                    "specify artist (--artist)")
+            sys.exit(0)
+        try:
+            stream_url = self.api.get_stream_url(track[0]['id'])
+        except IndexError:
+            print("Can't find track (use --nocache if you are "
+                    "sure the track exists)")
+            sys.exit(0)
+
         with open(os.devnull, 'w') as temp:
             proc = subprocess.Popen(["mplayer", "-ao", "alsa:device=hw=1.0", \
                     "%s" % stream_url])
             return proc
     
-    def db_connect(self):
-        library = shelve.open(os.path.expanduser("~/.gpm/library.db"))
-
-
     def load_config(self):
         config = dict()
         try:
@@ -113,23 +120,37 @@ class GPM:
         return config
 
     def search(self, search):
-        pass
+        tracks  = [track for track in self.library if track['title'] == search]
+        try:
+            for track in tracks:
+                print track["artist"] + " - " + track["title"]
+        except IndexError:
+            print("Can't find track (use --nocache if you are "
+                    "sure the track exists)")
+            sys.exit(0)   
 
 def main():
     gpm = GPM()    
 
-    parser = argparse.ArgumentParser(description =
-            'Command line interface to Google\'s Play Music service')
+    parser = OptionParser()
+    #parser = argparse.ArgumentParser(description =
+    #        "Command line interface to Google\'s Play Music service")
 
-    parser.add_argument('--cached')
-    parser.add_argument('--play')
-    parser.add_argument('--search')
+    parser.add_option('--search')
+    parser.add_option('--artist')
+    parser.add_option('--cached')
+    parser.add_option('--play')
 
-    args = parser.parse_args()
-    for opt, arg in vars(args).iteritems():
-        if opt == "play":
-            gpm.play(arg)
-        elif opt == 'cached':
+    args, opts = parser.parse_args()
+
+    for arg in vars(args):
+        if arg == "cached":
+           print args.cached 
+        elif arg == "search":
+            pass
+        elif arg == "play":
+            pass
+        elif arg == "artist":
             pass
 
 if __name__ == "__main__":
