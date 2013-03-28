@@ -20,11 +20,11 @@
 
 import sys
 import os
-#import argparse
-from optparse import OptionParser
+import argparse
 import getpass
 import subprocess
 import textwrap
+import errno
 import cPickle as pickle
 from requests import ConnectionError
 from gmusicapi import Api
@@ -86,7 +86,25 @@ class GPM:
                     open(os.path.expanduser("~/.gpm/library.db"), "wb"))
             return online_lib
 
-    def play(self, title):
+    def load_config(self):
+        config = dict()
+        try:
+            with open(os.path.expanduser("~/.gpmrc")) as f:
+                lines = f.readlines()
+                for line in lines:
+                    words = line.split()
+                    if words[0] == 'login':
+                        config['login'] = words[1]
+                    elif words[0] == 'password':
+                        config['password'] = words[1]
+        except IOError:
+            pass
+        return config
+   
+    def fetch_next():
+       pass
+
+    def play(self, title, artist = None):
         track  = [track for track in self.library if track['title'] == title]
         if len(track) > 1:
             print("More than one title with this name, please "
@@ -103,55 +121,47 @@ class GPM:
             proc = subprocess.Popen(["mplayer", "-ao", "alsa:device=hw=1.0", \
                     "%s" % stream_url])
             return proc
-    
-    def load_config(self):
-        config = dict()
-        try:
-            with open(os.path.expanduser("~/.gpmrc")) as f:
-                lines = f.readlines()
-                for line in lines:
-                    words = line.split()
-                    if words[0] == 'login':
-                        config['login'] = words[1]
-                    elif words[0] == 'password':
-                        config['password'] = words[1]
-        except IOError:
-            pass
-        return config
 
-    def search(self, search):
-        tracks  = [track for track in self.library if track['title'] == search]
+    def search(self, title, artist = None):
+        tracks  = [track for track in self.library if track['title'] == title]
         try:
             for track in tracks:
+                # Just continue the loop if the artists do not match
+                if (artist != None) and (track["artist"] != artist):
+                    continue
                 print track["artist"] + " - " + track["title"]
         except IndexError:
-            print("Can't find track (use --nocache if you are "
-                    "sure the track exists)")
+            print("Can't find track (use --sync option to update the local "
+                    "library before searching)")
             sys.exit(0)   
 
 def main():
-    gpm = GPM()    
+    parser = argparse.ArgumentParser(description='Process some integers.')
+    parser.add_argument('keyword', metavar='<play|search>', type=str)
+    parser.add_argument('track', type=str,
+            help='Specify track title to play')
+    parser.add_argument('-a', '--artist', type=str,
+            help='If search returns more then one title spefify artist')
+    parser.add_argument('-s', '--sync', action='store_true',  
+            help='Search the media library directly instead of the local db')
+    parser.add_argument('-l','--loop', metavar='<track|album|artist>',
+            help='Specify loop type, values are: track, album, artist')
 
-    parser = OptionParser()
-    #parser = argparse.ArgumentParser(description =
-    #        "Command line interface to Google\'s Play Music service")
+    args = parser.parse_args()
 
-    parser.add_option('--search')
-    parser.add_option('--artist')
-    parser.add_option('--cached')
-    parser.add_option('--play')
+    # Throw away the local library if sync parameter given...
+    if args.sync:
+        try:
+            local_library = os.path.expanduser("~/.gpm/library.db")
+            os.remove(local_library)
+        except OSError:
+            print "error"
+    gpm = GPM()
 
-    args, opts = parser.parse_args()
-
-    for arg in vars(args):
-        if arg == "cached":
-           print args.cached 
-        elif arg == "search":
-            pass
-        elif arg == "play":
-            pass
-        elif arg == "artist":
-            pass
+    if args.keyword == "search":
+        gpm.search(args.track, args.artist)
+    elif args.keyword == "play":
+        gpm.play(args.track, args.artist)
 
 if __name__ == "__main__":
     main()
