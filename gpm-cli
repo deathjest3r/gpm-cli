@@ -23,8 +23,8 @@ import os
 import argparse
 import getpass
 import subprocess
-import textwrap
 import errno
+from select import select
 import cPickle as pickle
 from requests import ConnectionError
 from gmusicapi import Api
@@ -32,6 +32,7 @@ from gmusicapi import Api
 class GPM:
     library = []
     api = None
+    delimiter = '|'
 
     def __init__(self):
         self.api = self.login(self.load_config())
@@ -66,14 +67,13 @@ class GPM:
                         "internet connection...")
                 sys.exit(0)
 
-
     def open_library(self):
         try:
             # Try to open the local library if it exists
             local_lib = pickle.load(\
                     open(os.path.expanduser("~/.gpm/library.db"), "rb"))
             return local_lib
-        except IOError: # Otherwise raise an exception and load the online lib
+        except IOError: # Otherwise load the online lib
             online_lib = self.api.get_all_songs()
             
             try:
@@ -101,14 +101,34 @@ class GPM:
             pass
         return config
    
-    def fetch_next():
-       pass
+    def get_tracks(self, title):
+        artist = ''
+      
+        try:
+            if self.delimiter in title:
+                artist, title = title.split(self.delimiter)
+            # Remove leading whitespaces and convert to lower case
+            title = " ".join(title.split()).lower()
+            artist = " ".join(artist.split()).lower()
+        except Exception:
+            print("Please either only specify a title or separate the artist"
+                    " from the title with a '" + self.delimiter + "'")
+            sys.exit(0)
 
-    def play(self, title, artist = None):
-        track  = [track for track in self.library if track['title'] == title]
+        if artist == '':
+            tracks = [track for track in self.library if
+                (title in track['title'].lower())]
+        else:
+            tracks = [track for track in self.library if
+                (title in track['title'].lower()) and
+                (artist in track['artist'].lower())]
+        return tracks
+
+    def play(self, title):
+        track = self.get_tracks(title)
         if len(track) > 1:
-            print("More than one title with this name, please "
-                    "specify artist (--artist)")
+            print("More than one title with this name, please specify the track"
+                    "with the following syntax: '<artist> | <title>'")
             sys.exit(0)
         try:
             stream_url = self.api.get_stream_url(track[0]['id'])
@@ -117,51 +137,74 @@ class GPM:
                     "sure the track exists)")
             sys.exit(0)
 
-        with open(os.devnull, 'w') as temp:
-            proc = subprocess.Popen(["mplayer", "-ao", "alsa:device=hw=1.0", \
+        # Just call mplayer, and when 'Enter' or 'Ctrl+C' is pressed close the
+        # program
+        try:
+            proc = subprocess.call(["mplayer", "-ao", "alsa:device=hw=1.0", \
                     "%s" % stream_url])
-            return proc
+        except KeyboardInterrupt:
+            pass
 
-    def search(self, title, artist = None):
-        tracks  = [track for track in self.library if track['title'] == title]
+    def search(self, search):
+        tracks  = [track for track in self.library if (search in track['title'])
+                or (search in track['album']) or (search in track['artist'])]
         try:
             for track in tracks:
-                # Just continue the loop if the artists do not match
-                if (artist != None) and (track["artist"] != artist):
-                    continue
-                print track["artist"] + " - " + track["title"]
+                sys.stdout.write(track["artist"] + "|" + track["title"] + "\n")
         except IndexError:
             print("Can't find track (use --sync option to update the local "
                     "library before searching)")
-            sys.exit(0)   
+            sys.exit(0)
 
 def main():
-    parser = argparse.ArgumentParser(description='Process some integers.')
-    parser.add_argument('keyword', metavar='<play|search>', type=str)
-    parser.add_argument('track', type=str,
-            help='Specify track title to play')
-    parser.add_argument('-a', '--artist', type=str,
-            help='If search returns more then one title spefify artist')
-    parser.add_argument('-s', '--sync', action='store_true',  
-            help='Search the media library directly instead of the local db')
-    parser.add_argument('-l','--loop', metavar='<track|album|artist>',
-            help='Specify loop type, values are: track, album, artist')
+    tracks  = list()
+    if select([sys.stdin], [], [], 0.0)[0]:
+        while True:
+            track = (sys.stdin.readline())
+            if not track:
+                break
+            else:
+                tracks.append(track)
+    
+    if not tracks:
+        # Define the different command line arguments
+        parser = argparse.ArgumentParser()
+        parser.add_argument('keyword', metavar='<play|search>', type=str)
+        parser.add_argument('track', type=str,
+                help='specify track title to play')
+        parser.add_argument('-s', '--sync', action='store_true',  
+                help='sync the local library with the online mediathek')
+        parser.add_argument('-l','--loop', metavar='<track|album|artist>',
+                help='specify loop type, values are: track, album, artist')
+        parser.add_argument('-d','--delimiter',
+                help=("specify the delitmiter that separates the artist from the"
+                " track title (e.g. '//' or '-', default: '|')"))
 
-    args = parser.parse_args()
+        args = parser.parse_args()
 
-    # Throw away the local library if sync parameter given...
-    if args.sync:
-        try:
-            local_library = os.path.expanduser("~/.gpm/library.db")
-            os.remove(local_library)
-        except OSError:
-            print "error"
-    gpm = GPM()
+        # Throw away the local library if sync parameter given...
+        if args.sync:
+            try:
+                local_library = os.path.expanduser("~/.gpm/library.db")
+                os.remove(local_library)
+            except OSError:
+                print "error"
+        
+        #Initialize local mediathek
+        gpm = GPM()
 
-    if args.keyword == "search":
-        gpm.search(args.track, args.artist)
-    elif args.keyword == "play":
-        gpm.play(args.track, args.artist)
+        if args.delimiter:
+            gpm.delimiter = args.delimiter
+        if args.keyword == "search":
+            gpm.search(args.track)
+        elif args.keyword == "play":
+            gpm.play(args.track)
+
+    else:
+        print tracks
+        for track in tracks:
+            gpm = GPM()
+            gpm.play(track)
 
 if __name__ == "__main__":
     main()
