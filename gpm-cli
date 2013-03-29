@@ -157,54 +157,39 @@ class GPM:
             sys.exit(0)
 
 def main():
-    tracks  = list()
-    if select([sys.stdin], [], [], 0.0)[0]:
-        while True:
-            track = (sys.stdin.readline())
-            if not track:
-                break
-            else:
-                tracks.append(track)
-    
-    if not tracks:
-        # Define the different command line arguments
-        parser = argparse.ArgumentParser()
-        parser.add_argument('keyword', metavar='<play|search>', type=str)
-        parser.add_argument('track', type=str,
-                help='specify track title to play')
-        parser.add_argument('-s', '--sync', action='store_true',  
-                help='sync the local library with the online mediathek')
-        parser.add_argument('-l','--loop', metavar='<track|album|artist>',
-                help='specify loop type, values are: track, album, artist')
-        parser.add_argument('-d','--delimiter',
-                help=("specify the delitmiter that separates the artist from the"
-                " track title (e.g. '//' or '-', default: '|')"))
+    # Define the different command line arguments
+    parser = argparse.ArgumentParser()
+    parser.add_argument('keyword', metavar='<play|search>', type=str)
+    parser.add_argument('track', type=str,
+            help='specify track title to play')
+    parser.add_argument('-s', '--sync', action='store_true',  
+            help='sync the local library with the online mediathek')
+    parser.add_argument('-l','--loop', metavar='<track|album|artist>',
+            help='specify loop type, values are: track, album, artist')
+    parser.add_argument('-d','--delimiter',
+            help=("specify the delitmiter that separates the artist from the"
+            " track title (e.g. '//' or '-', default: '|')"))
 
-        args = parser.parse_args()
+    args = parser.parse_args()
 
-        # Throw away the local library if sync parameter given...
-        if args.sync:
-            try:
-                local_library = os.path.expanduser("~/.gpm/library.db")
-                os.remove(local_library)
-            except OSError:
-                print "error"
-        
-        #Initialize local mediathek
-        gpm = GPM()
+    # Throw away the local library if sync parameter given...
+    if args.sync:
+        try:
+            local_library = os.path.expanduser("~/.gpm/library.db")
+            os.remove(local_library)
+        except OSError:
+            pass
 
-        if args.delimiter:
-            gpm.delimiter = args.delimiter
-        if args.keyword == "search":
-            gpm.search(args.track)
-        elif args.keyword == "play":
-            gpm.play(args.track)
+    #Initialize local mediathek
+    gpm = GPM()
 
-    else:
-        print tracks
-        for track in tracks:
-            gpm = GPM()
-            gpm.play(track)
+    if args.delimiter:
+        gpm.delimiter = args.delimiter
+    if args.keyword == "search":
+        gpm.search(args.track)
+    elif args.keyword == "play":
+        gpm.play(args.track)
+
 
 if __name__ == "__main__":
     main()
