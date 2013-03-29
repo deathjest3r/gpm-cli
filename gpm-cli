@@ -33,6 +33,7 @@ class GPM:
     library = []
     api = None
     delimiter = '|'
+    sound_dev = 'alsa:device=hw=0.0'
 
     def __init__(self):
         self.api = self.login(self.load_config())
@@ -117,40 +118,47 @@ class GPM:
 
         if artist == '':
             tracks = [track for track in self.library if
-                (title in track['title'].lower())]
+                (title in track['title'].lower()) or
+                (title in track['album'].lower()) or
+                (title in track['artist'].lower())]
         else:
             tracks = [track for track in self.library if
-                (title in track['title'].lower()) and
+                ((title in track['title'].lower()) or
+                (title in track['album'].lower())) and
                 (artist in track['artist'].lower())]
         return tracks
 
     def play(self, title):
-        track = self.get_tracks(title)
-        if len(track) > 1:
-            print("More than one title with this name, please specify the track"
-                    "with the following syntax: '<artist> | <title>'")
-            sys.exit(0)
-        try:
-            stream_url = self.api.get_stream_url(track[0]['id'])
-        except IndexError:
-            print("Can't find track (use --nocache if you are "
-                    "sure the track exists)")
-            sys.exit(0)
+        tracks = self.get_tracks(title)
+       
+        for track in tracks: 
+            try:
+                stream_url = self.api.get_stream_url(track['id'])
+            except IndexError:
+                print("Can't find track (use --nocache if you are "
+                        "sure the track exists)")
+                sys.exit(0)
 
-        # Just call mplayer, and when 'Enter' or 'Ctrl+C' is pressed close the
-        # program
-        try:
-            proc = subprocess.call(["mplayer", "-ao", "alsa:device=hw=1.0", \
-                    "%s" % stream_url])
-        except KeyboardInterrupt:
-            pass
+            # Just call mplayer, and when 'Enter' or 'Ctrl+C' is pressed close
+            # the program
+            try:
+                print("Now playing " + track['artist'] + " - " + track['title'])
+                with open(os.devnull, 'w') as temp:
+                    proc = subprocess.call(["mplayer", "-ao", \
+                            self.sound_dev, "%s" % stream_url],
+                            stdout=temp, stderr=temp)
+            except KeyboardInterrupt:
+                break
 
     def search(self, search):
-        tracks  = [track for track in self.library if (search in track['title'])
-                or (search in track['album']) or (search in track['artist'])]
+        search = search.lower()
+        tracks  = [track for track in self.library if
+                (search in track['title'].lower()) or
+                (search in track['album'].lower()) or
+                (search in track['artist'].lower())]
         try:
             for track in tracks:
-                sys.stdout.write(track["artist"] + "|" + track["title"] + "\n")
+                sys.stdout.write(track["artist"] + " | " + track["title"] + "\n")
         except IndexError:
             print("Can't find track (use --sync option to update the local "
                     "library before searching)")
@@ -161,14 +169,16 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('keyword', metavar='<play|search>', type=str)
     parser.add_argument('track', type=str,
-            help='specify track title to play')
+            help=("specify track title to play"))
     parser.add_argument('-s', '--sync', action='store_true',  
-            help='sync the local library with the online mediathek')
+            help=("sync the local library with the online mediathek"))
     parser.add_argument('-l','--loop', metavar='<track|album|artist>',
-            help='specify loop type, values are: track, album, artist')
+            help=("specify loop type, values are: track, album, artist"))
     parser.add_argument('-d','--delimiter',
             help=("specify the delitmiter that separates the artist from the"
             " track title (e.g. '//' or '-', default: '|')"))
+    parser.add_argument('-a', '--audio',
+            help=("specify sound device (default: 'alsa:device=hw=0.0')"))
 
     args = parser.parse_args()
 
@@ -183,8 +193,12 @@ def main():
     #Initialize local mediathek
     gpm = GPM()
 
+    
     if args.delimiter:
         gpm.delimiter = args.delimiter
+    if args.audio:
+        gpm.sound_dev = args.audio
+
     if args.keyword == "search":
         gpm.search(args.track)
     elif args.keyword == "play":
