@@ -12,7 +12,7 @@ Requirements
 
 Usage
 -----
-./gpm-cli play "Slayer | Reborn"
+`./gpm-cli play "Slayer | Reborn"`
 
 Configuration
 -------------
