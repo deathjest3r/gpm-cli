@@ -6,14 +6,13 @@ A command line interface to Google's Play Music service
 Requirements
 ------------
 * Python 2
-* [Simon Weber's Unofficial Google Music API][weber]
+* gmusicapi
 * mplayer
 * Some songs on Google Play Music
 
 Usage
 -----
-.. code-block:: python
-    ./gpm-cli play "<track|artist|album>"
+./gpm-cli play "Slayer | Reborn"
 
 
 ToDo
@@ -21,4 +20,5 @@ ToDo
 * Add Media Keys to start/pause/skip tracks
 * Add Last.FM plugin
 * Sort tracks correcly (by track number)
+* Bundle pip package
 * Release v0.2 
