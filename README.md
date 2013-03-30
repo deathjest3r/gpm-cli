@@ -14,6 +14,20 @@ Usage
 -----
 ./gpm-cli play "Slayer | Reborn"
 
+Configuration
+-------------
+Configuration of gpm-cli is via `~/.gpmrc`. An example config looks like:
+
+            email <your gmailaddress>
+            password <your gmail password>
+
+You don't need to store both in the file you can also start gpm-cli without a
+config file. Then you have to login manually everytime you start it
+
+Library
+-------
+The library is stored in `~/.gpm/library.db`. If you want to sync it with the
+online library just add `--sync` to the command line
 
 ToDo
 ----
