@@ -16,10 +16,20 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
 
-class plugin:
+import threading
+
+class plugin(threading.Thread):
     def __init__(self):
-        pass
+        threading.Thread.__init__(self)
+        self._stop = threading.Event() 
 
     # Method has to be overwritten by actual plugin
     def run(self):
         pass
+
+    def stop(self):
+        self._stop.set()
+    
+    def stopped(self):
+        return self._stop.isSet()
+        

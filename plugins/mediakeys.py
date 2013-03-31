@@ -16,6 +16,9 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
 
+from Xlib.display import Display
+from Xlib import X
+import sys
 
 from plugin import plugin
 
@@ -23,5 +26,17 @@ class mediakeys(plugin):
     def __init__(self):
         plugin.__init__(self)
 
+    def handle_event(event):
+        print "key pressed"
+
     def run(self):
-        pass
+        display = Display()
+        screen = display.screen()
+        root = screen.root
+
+        while True:
+            #event = root.display.next_event()
+            #if event.type in [X.KeyPress, X.KeyRelease]:
+            #    handle_event(event)
+            if self.stopped():
+                break

@@ -30,14 +30,22 @@ from requests import ConnectionError
 from gmusicapi import Api
 
 class GPM:
-    library = []
-    api = None
-    delimiter = '|'
-    sound_dev = 'alsa:device=hw=0.0'
-
     def __init__(self):
-        self.api = self.login(self.load_config())
-        self.library = self.open_library()
+        self._library = []
+        self._api = None
+        self._delimiter = '|'
+        self._plugins = []
+
+        self.sound_dev = "alsa:device=hw=0.0"
+        
+        self._api = self.login(self.load_config())
+        self._library = self.open_library()
+
+    def __del__(self):
+        if self._plugins:
+            for plugin in self._plugins:
+                plugin.stop()
+
 
     def login(self, config):
         # Do the login procedure
@@ -75,7 +83,7 @@ class GPM:
                     open(os.path.expanduser("~/.gpm/library.db"), "rb"))
             return local_lib
         except IOError: # Otherwise load the online lib
-            online_lib = self.api.get_all_songs()
+            online_lib = self._api.get_all_songs()
             
             try:
                 os.makedirs(os.path.expanduser("~/.gpm"))
@@ -102,7 +110,7 @@ class GPM:
             pass
         return config
   
-    def load_plugins(self, plugins):
+    def load_plugins(self, plugin_list):
         plugin_folder = os.path.realpath(os.path.abspath(os.path.join(
                 os.path.split(inspect.getfile(
                 inspect.currentframe()))[0],"plugins")))
@@ -110,15 +118,20 @@ class GPM:
         if plugin_folder not in sys.path:
             sys.path.insert(0, plugin_folder)
         
-        plugins = plugins.split(' ')
+        plugin_list = plugin_list.split(' ')
       
         try:
-            for plugin in plugins:
+            for plugin in plugin_list:
+                # Iterate over the list of plugins and load them
                 module = __import__(plugin)
                 plugin_class = getattr(module, plugin)
                 plugin_inst = plugin_class()
-                plugin_inst.run()
-        except ImportError:
+                # Start the plugin
+                self._plugins.append(plugin_inst)
+                plugin_inst.start()
+        except ImportError, e:
+            #import traceback
+            #print traceback.format_exc(e)
             print "Can't run " + plugin + " plugin"
             sys.exit(0)
 
@@ -126,8 +139,8 @@ class GPM:
         artist = ''
       
         try:
-            if self.delimiter in title:
-                artist, title = title.split(self.delimiter)
+            if self._delimiter in title:
+                artist, title = title.split(self._delimiter)
             # Remove leading whitespaces and convert to lower case
             title = " ".join(title.split()).lower()
             artist = " ".join(artist.split()).lower()
@@ -137,12 +150,12 @@ class GPM:
             sys.exit(0)
 
         if artist == '':
-            tracks = [track for track in self.library if
+            tracks = [track for track in self._library if
                 (title in track['title'].lower()) or
                 (title in track['album'].lower()) or
                 (title in track['artist'].lower())]
         else:
-            tracks = [track for track in self.library if
+            tracks = [track for track in self._library if
                 ((title in track['title'].lower()) or
                 (title in track['album'].lower())) and
                 (artist in track['artist'].lower())]
@@ -153,11 +166,11 @@ class GPM:
        
         for track in tracks: 
             try:
-                stream_url = self.api.get_stream_url(track['id'])
+                stream_url = self._api.get_stream_url(track['id'])
             except IndexError:
                 print("Can't find track (use --nocache if you are "
                         "sure the track exists)")
-                sys.exit(0)
+                break
 
             # Just call mplayer, and when 'Enter' or 'Ctrl+C' is pressed close
             # the program
@@ -172,7 +185,7 @@ class GPM:
 
     def search(self, search):
         search = search.lower()
-        tracks  = [track for track in self.library if
+        tracks  = [track for track in self._library if
                 (search in track['title'].lower()) or
                 (search in track['album'].lower()) or
                 (search in track['artist'].lower())]
@@ -183,7 +196,6 @@ class GPM:
         else:
             print("Can't find any track (use --sync option to update the local "
                     "library before searching)")
-            sys.exit(0)
 
 def main():
     # Define the different command line arguments
@@ -201,7 +213,7 @@ def main():
     parser.add_argument('-a', '--audio',
             help=("specify sound device (default: 'alsa:device=hw=0.0')"))
     parser.add_argument('-p', '--plugins',
-            help=("specify list of plugins to load (e.g. 'mediakeys, lastfm')"))
+            help=("specify list of plugins to load (e.g. 'mediakeys lastfm')"))
 
     args = parser.parse_args()
 
@@ -216,19 +228,21 @@ def main():
     #Initialize local mediathek
     gpm = GPM()
 
+    try:
+        if args.delimiter:
+            gpm.delimiter = args.delimiter
+        if args.audio:
+            gpm.sound_dev = args.audio
     
-    if args.delimiter:
-        gpm.delimiter = args.delimiter
-    if args.audio:
-        gpm.sound_dev = args.audio
-    if args.plugins:
-        gpm.load_plugins(args.plugins)
+        if args.plugins:
+            gpm.load_plugins(args.plugins)
 
-    if args.keyword == "search":
-        gpm.search(args.track)
-    elif args.keyword == "play":
-        gpm.play(args.track)
-
+        if args.keyword == "search":
+            gpm.search(args.track)
+        elif args.keyword == "play":
+            gpm.play(args.track)
+    finally:
+        del gpm
 
 if __name__ == "__main__":
     try:
