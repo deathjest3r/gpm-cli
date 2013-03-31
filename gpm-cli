@@ -20,11 +20,11 @@
 
 import sys
 import os
+import inspect
 import argparse
 import getpass
 import subprocess
 import errno
-from select import select
 import cPickle as pickle
 from requests import ConnectionError
 from gmusicapi import Api
@@ -65,7 +65,7 @@ class GPM:
                     sys.exit(0)
             except ConnectionError:
                 print("Not able to connect to the Google service, check your"
-                        "internet connection...")
+                        " internet connection...")
                 sys.exit(0)
 
     def open_library(self):
@@ -82,7 +82,7 @@ class GPM:
             except OSError as e:
                 if e.errno != errno.EEXIST:
                     raise
-
+            
             pickle.dump( online_lib, \
                     open(os.path.expanduser("~/.gpm/library.db"), "wb"))
             return online_lib
@@ -101,7 +101,27 @@ class GPM:
         except IOError:
             pass
         return config
-   
+  
+    def load_plugins(self, plugins):
+        plugin_folder = os.path.realpath(os.path.abspath(os.path.join(
+                os.path.split(inspect.getfile(
+                inspect.currentframe()))[0],"plugins")))
+        
+        if plugin_folder not in sys.path:
+            sys.path.insert(0, plugin_folder)
+        
+        plugins = plugins.split(' ')
+      
+        try:
+            for plugin in plugins:
+                module = __import__(plugin)
+                plugin_class = getattr(module, plugin)
+                plugin_inst = plugin_class()
+                plugin_inst.run()
+        except ImportError:
+            print "Can't run " + plugin + " plugin"
+            sys.exit(0)
+
     def get_tracks(self, title):
         artist = ''
       
@@ -156,11 +176,12 @@ class GPM:
                 (search in track['title'].lower()) or
                 (search in track['album'].lower()) or
                 (search in track['artist'].lower())]
-        try:
+        
+        if tracks:
             for track in tracks:
                 sys.stdout.write(track["artist"] + " | " + track["title"] + "\n")
-        except IndexError:
-            print("Can't find track (use --sync option to update the local "
+        else:
+            print("Can't find any track (use --sync option to update the local "
                     "library before searching)")
             sys.exit(0)
 
@@ -179,6 +200,8 @@ def main():
             " track title (e.g. '//' or '-', default: '|')"))
     parser.add_argument('-a', '--audio',
             help=("specify sound device (default: 'alsa:device=hw=0.0')"))
+    parser.add_argument('-p', '--plugins',
+            help=("specify list of plugins to load (e.g. 'mediakeys, lastfm')"))
 
     args = parser.parse_args()
 
@@ -198,6 +221,8 @@ def main():
         gpm.delimiter = args.delimiter
     if args.audio:
         gpm.sound_dev = args.audio
+    if args.plugins:
+        gpm.load_plugins(args.plugins)
 
     if args.keyword == "search":
         gpm.search(args.track)
@@ -206,4 +231,7 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        pass
