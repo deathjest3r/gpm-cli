@@ -28,6 +28,7 @@ import errno
 import cPickle as pickle
 from requests import ConnectionError
 from gmusicapi import Api
+from player import Player
 
 class GPM:
     def __init__(self):
@@ -35,8 +36,7 @@ class GPM:
         self._api = None
         self._delimiter = '|'
         self._plugins = []
-
-        self.sound_dev = "alsa:device=hw=0.0"
+        self._player = Player()
         
         self._api = self.login(self.load_config())
         self._library = self.open_library()
@@ -125,7 +125,7 @@ class GPM:
                 # Iterate over the list of plugins and load them
                 module = __import__(plugin)
                 plugin_class = getattr(module, plugin)
-                plugin_inst = plugin_class()
+                plugin_inst = plugin_class(self._player)
                 # Start the plugin
                 self._plugins.append(plugin_inst)
                 plugin_inst.start()
@@ -171,15 +171,10 @@ class GPM:
                 print("Can't find track (use --nocache if you are "
                         "sure the track exists)")
                 break
-
-            # Just call mplayer, and when 'Enter' or 'Ctrl+C' is pressed close
-            # the program
+            
             try:
-                print("Now playing " + track['artist'] + " - " + track['title'])
-                with open(os.devnull, 'w') as temp:
-                    proc = subprocess.call(["mplayer", "-ao", \
-                            self.sound_dev, "%s" % stream_url],
-                            stdout=temp, stderr=temp)
+                print("Now playing " + track['artist'] + " - " + track['title']) 
+                self._player.start(stream_url)
             except KeyboardInterrupt:
                 break
 

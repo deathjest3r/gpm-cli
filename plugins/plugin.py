@@ -21,6 +21,7 @@ import threading
 class plugin(threading.Thread):
     def __init__(self):
         threading.Thread.__init__(self)
+        self.setDaemon(True)
         self._stop = threading.Event() 
 
     # Method has to be overwritten by actual plugin

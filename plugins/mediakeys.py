@@ -16,27 +16,67 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
 
-from Xlib.display import Display
 from Xlib import X
-import sys
+from Xlib.error import BadAccess
+from Xlib.display import Display
 
 from plugin import plugin
 
-class mediakeys(plugin):
-    def __init__(self):
-        plugin.__init__(self)
+keys = [172,  # XF86AudioPlay
+        174,  # XF86AudioStop
+        171,  # XF86AudioNext
+        173 ] # XF86AudioPrev
 
-    def handle_event(event):
-        print "key pressed"
+class mediakeys(plugin):
+    def __init__(self, player):
+        plugin.__init__(self)
+        
+        self._player = player
+        self._keybind_failed = False
+
+    def handle_event(self, event):
+        keycode = event.detail
+        if keycode in keys:
+            # Play/Pause key
+            if keycode == 172:
+                self._player.play()
+            # Stop key
+            elif keycode == 174: 
+                self._player.stop()
+            # Next key
+            elif keycode == 171:
+                self._player.next()
+            # Prev key
+            elif keycode == 173:
+                self._player.prev()
+
+    # We have to register our own exception handler since Xlib does not catch
+    # exceptions correctly
+    def handle_xerror(self, err, req = None):
+        if isinstance(err, BadAccess):
+            self._keybind_failed = True
+        else:
+            self.display.default_error_handler(err)
 
     def run(self):
-        display = Display()
-        screen = display.screen()
-        root = screen.root
+        self.display = Display()
+        root = self.display.screen().root
+
+        self.display.set_error_handler(self.handle_xerror)
+        
+        root.change_attributes(event_mask = X.KeyPressMask)
+        for keycode in keys:
+            root.grab_key(keycode, X.AnyModifier, 1, X.GrabModeAsync,
+                    X.GrabModeAsync)
+      
+        self.display.sync()
+        if self._keybind_failed:
+            print "Can't enable 'mediakeys', already in use by an other process"
+            return
 
         while True:
-            #event = root.display.next_event()
-            #if event.type in [X.KeyPress, X.KeyRelease]:
-            #    handle_event(event)
+            event = root.display.next_event()
+            self.handle_event(event)
             if self.stopped():
                 break
+            
