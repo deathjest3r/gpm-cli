@@ -24,42 +24,45 @@ class Player:
         self._proc = None
         self.sound_dev = sound_dev
 
-    def start(self, stream_url):
-        try:
-            with open(os.devnull, 'w') as temp:
-                self._proc = subprocess.Popen(["mplayer", "-slave", "-ao", \
-                        self.sound_dev, "%s" % stream_url],
-                        stdin=subprocess.PIPE, stdout=temp, stderr=temp)
-                
-                self._proc.wait()
-        except KeyboardInterrupt:
+    def start(self, playlist):
+        for track in playlist:
             try:
-                if not self._proc.poll():
-                    self._proc.terminate()
-            except OSError:
-                print "Can't close mplayer"
-            raise KeyboardInterrupt 
+                print("Now playing " + track[0] + " - " + track[1])
+                with open(os.devnull, 'w') as temp:
+                    self._proc = subprocess.Popen(["mplayer", "-slave", "-ao",
+                            self.sound_dev, "%s" % track[2]],
+                            stdin=subprocess.PIPE, stdout=temp, stderr=temp)
+                    self._proc.wait()
+            except KeyboardInterrupt:
+                try:
+                    if(isinstance(self._proc, subprocess.Popen) and
+                            self._proc.poll() != None):
+                        self._proc.terminate()
+                except OSError:
+                    print "Can't close mplayer"
+                raise KeyboardInterrupt 
 
     def play(self):
-        try:
-            if not self._proc.poll():
-                self._proc.communicate("pause\n") 
-        except ValueError:
-            pass
+        pass
+        #try:
+        #    if isinstance(self._proc, subprocess.Popen):
+        #        self._proc.communicate("pause\n")
+        #except ValueError:
+        #    pass
 
     def stop(self):
         try:
-            if not self._proc.poll():
+            if isinstance(self._proc, subprocess.Popen):
                 self._proc.communicate("stop\n")
         except ValueError:
             pass
 
     def next(self):
         try:
-            if not self._proc.poll():
+            if isinstance(self._proc, subprocess.Popen):
                 self._proc.terminate()
         except OSError:
-            pass # Already terminated
+            pass
 
     def prev(self):
         pass

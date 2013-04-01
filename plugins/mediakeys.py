@@ -35,20 +35,21 @@ class mediakeys(plugin):
         self._keybind_failed = False
 
     def handle_event(self, event):
-        keycode = event.detail
-        if keycode in keys:
-            # Play/Pause key
-            if keycode == 172:
-                self._player.play()
-            # Stop key
-            elif keycode == 174: 
-                self._player.stop()
-            # Next key
-            elif keycode == 171:
-                self._player.next()
-            # Prev key
-            elif keycode == 173:
-                self._player.prev()
+        if event.type == X.KeyRelease:
+            keycode = event.detail
+            if keycode in keys:
+                # Play/Pause key
+                if keycode == 172:
+                    self._player.play()
+                # Stop key
+                elif keycode == 174: 
+                    self._player.stop()
+                # Next key
+                elif keycode == 171:
+                    self._player.next()
+                # Prev key
+                elif keycode == 173:
+                    self._player.prev()
 
     # We have to register our own exception handler since Xlib does not catch
     # exceptions correctly
@@ -64,7 +65,7 @@ class mediakeys(plugin):
 
         self.display.set_error_handler(self.handle_xerror)
         
-        root.change_attributes(event_mask = X.KeyPressMask)
+        root.change_attributes(event_mask = X.KeyReleaseMask)
         for keycode in keys:
             root.grab_key(keycode, X.AnyModifier, 1, X.GrabModeAsync,
                     X.GrabModeAsync)

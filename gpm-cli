@@ -23,11 +23,11 @@ import os
 import inspect
 import argparse
 import getpass
-import subprocess
 import errno
 import cPickle as pickle
 from requests import ConnectionError
 from gmusicapi import Api
+from gmusicapi.exceptions import ParseException, CallFailure
 from player import Player
 
 class GPM:
@@ -163,20 +163,23 @@ class GPM:
 
     def play(self, title):
         tracks = self.get_tracks(title)
+        playlist = []
        
-        for track in tracks: 
-            try:
-                stream_url = self._api.get_stream_url(track['id'])
-            except IndexError:
-                print("Can't find track (use --nocache if you are "
+        # Fetch all tracks and give the playlist to the player
+        if tracks:
+            for track in tracks: 
+                try:
+                    playlist.append([ track['artist'],  track['title'], 
+                            self._api.get_stream_url(track['id'])])
+                except CallFailure:
+                    print("Can't extract streaming URL, please try again in a "
+                            "few seconds")
+                    break
+        else:
+             print("Can't find track (use --nocache if you are "
                         "sure the track exists)")
-                break
             
-            try:
-                print("Now playing " + track['artist'] + " - " + track['title']) 
-                self._player.start(stream_url)
-            except KeyboardInterrupt:
-                break
+        self._player.start(playlist)
 
     def search(self, search):
         search = search.lower()
