@@ -27,7 +27,7 @@ import errno
 from select import select
 import cPickle as pickle
 from requests import ConnectionError
-from gmusicapi import Api
+from gmusicapi import Webclient
 
 class GPM:
     library = []
@@ -43,9 +43,8 @@ class GPM:
         # Do the login procedure
         while True:
             try:
-                api = Api()
-                if api.login(config['login'], config['password'], \
-                        perform_upload_auth = False):
+                api = Webclient()
+                if api.login(config['login'], config['password']):
                     return api # Succesfully logged in  
                 else:
                     print "Sorry, try again."
