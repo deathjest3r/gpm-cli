@@ -18,21 +18,30 @@
 
 import os
 import subprocess
+import threading
 
 class Player:
     def __init__(self, sound_dev = "alsa:device=hw=0.0"):
         self._proc = None
         self.sound_dev = sound_dev
+        self._stop = threading.Event()
 
     def start(self, playlist):
-        for track in playlist:
+        entry = 0
+        while(entry < len(playlist)):
             try:
-                print("Now playing " + track[0] + " - " + track[1])
+                if(self._stop.isSet()):
+                    entry = entry - 1
+                    self._stop.clear()
+                print("Now playing " + playlist[entry][0] + " - " +
+                        playlist[entry][1])
                 with open(os.devnull, 'w') as temp:
                     self._proc = subprocess.Popen(["mplayer", "-slave", "-ao",
-                            self.sound_dev, "%s" % track[2]],
+                            self.sound_dev, "%s" % playlist[entry][2]],
                             stdin=subprocess.PIPE, stdout=temp, stderr=temp)
                     self._proc.wait()
+            
+                    entry = entry + 1
             except KeyboardInterrupt:
                 try:
                     if(isinstance(self._proc, subprocess.Popen) and
@@ -40,9 +49,11 @@ class Player:
                         self._proc.terminate()
                 except OSError:
                     print "Can't close mplayer"
-                raise KeyboardInterrupt 
 
     def play(self):
+        if self._stop.isSet():
+            self._stop.clear()
+
         pass
         #try:
         #    if isinstance(self._proc, subprocess.Popen):
@@ -54,6 +65,7 @@ class Player:
         try:
             if isinstance(self._proc, subprocess.Popen):
                 self._proc.communicate("stop\n")
+            self._stop.set()
         except ValueError:
             pass
 

@@ -78,6 +78,3 @@ class mediakeys(plugin):
         while True:
             event = root.display.next_event()
             self.handle_event(event)
-            if self.stopped():
-                break
-            

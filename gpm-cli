@@ -26,7 +26,7 @@ import getpass
 import errno
 import cPickle as pickle
 from requests import ConnectionError
-from gmusicapi import Api
+from gmusicapi import Webclient
 from gmusicapi.exceptions import ParseException, CallFailure
 from player import Player
 
@@ -51,7 +51,7 @@ class GPM:
         # Do the login procedure
         while True:
             try:
-                api = Api()
+                api = Webclient()
                 if api.login(config['login'], config['password'], \
                         perform_upload_auth = False):
                     return api # Succesfully logged in  
@@ -169,6 +169,7 @@ class GPM:
         if tracks:
             for track in tracks: 
                 try:
+                    print "fetched " + track['title']
                     playlist.append([ track['artist'],  track['title'], 
                             self._api.get_stream_url(track['id'])])
                 except CallFailure:
