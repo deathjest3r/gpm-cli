@@ -52,8 +52,7 @@ class GPM:
         while True:
             try:
                 api = Webclient()
-                if api.login(config['login'], config['password'], \
-                        perform_upload_auth = False):
+                if api.login(config['login'], config['password']):
                     return api # Succesfully logged in  
                 else:
                     print "Sorry, try again."
