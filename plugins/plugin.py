@@ -22,15 +22,7 @@ class plugin(threading.Thread):
     def __init__(self):
         threading.Thread.__init__(self)
         self.setDaemon(True)
-        self._stop = threading.Event() 
 
     # Method has to be overwritten by actual plugin
     def run(self):
         pass
-
-    def stop(self):
-        self._stop.set()
-    
-    def stopped(self):
-        return self._stop.isSet()
-        

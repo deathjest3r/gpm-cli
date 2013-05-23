@@ -168,6 +168,7 @@ class GPM:
         if tracks:
             for track in tracks: 
                 try:
+                    print "fetched " + track['title']
                     playlist.append([ track['artist'],  track['title'], 
                             self._api.get_stream_url(track['id'])])
                 except CallFailure:
