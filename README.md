@@ -3,6 +3,20 @@ gpm-cli - Google Play Music Command Line Interface
 
 A command line interface to Google's Play Music service
 
+Installation
+------------
+
+Install Google Play Music Python API:
+`git clone git://github.com/simon-weber/Unofficial-Google-Music-API.git
+cd Unofficial-Google-Music-API
+git checkout master
+python setup.py install`
+
+Install gpm-cli:
+`git clone git://github.com/deathjest3r/gpm-cli.git
+cd gpm-cli`
+
+
 Requirements
 ------------
 * Python 2
