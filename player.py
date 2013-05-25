@@ -16,7 +16,7 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
 
-import os
+import os, sys
 import subprocess
 import threading
 
@@ -26,43 +26,22 @@ class Player:
         self.sound_dev = sound_dev
         self._stop = threading.Event()
 
-    def start(self, playlist):
-        entry = 0
-        while(entry < len(playlist)):
+    def play(self, track):
+        try:
+            with open(os.devnull, 'w') as temp:
+                self._proc = subprocess.Popen(["mplayer", "-slave", "-ao",
+                        self.sound_dev, "%s" % track],
+                        stdin=subprocess.PIPE, stdout=temp, stderr=temp)
+                self._proc.wait()
+        except KeyboardInterrupt:
             try:
-                if(self._stop.isSet()):
-                    entry = entry - 1
-                    self._stop.clear()
-                print("Now playing " + playlist[entry][0] + " - " +
-                        playlist[entry][1])
-                with open(os.devnull, 'w') as temp:
-                    self._proc = subprocess.Popen(["mplayer", "-slave", "-ao",
-                            self.sound_dev, "%s" % playlist[entry][2]],
-                            stdin=subprocess.PIPE, stdout=temp, stderr=temp)
-                    self._proc.wait()
-            
-                    entry = entry + 1
-            except KeyboardInterrupt:
-                try:
-                    if(isinstance(self._proc, subprocess.Popen) and
-                            self._proc.poll() != None):
-                        self._proc.terminate()
-                    break
-                except OSError:
-                    print "Can't close mplayer"
-                    break
-
-    def play(self):
-        if self._stop.isSet():
-            self._stop.clear()
-
-        pass
-        #try:
-        #    if isinstance(self._proc, subprocess.Popen):
-        #        self._proc.communicate("pause\n")
-        #except ValueError:
-        #    pass
-
+                if(isinstance(self._proc, subprocess.Popen) and
+                        self._proc.poll() != None):
+                    self._proc.terminate()
+            except OSError:
+                print "Can't close mplayer"
+            sys.exit(0)
+        
     def stop(self):
         try:
             if isinstance(self._proc, subprocess.Popen):

@@ -162,28 +162,20 @@ class GPM:
 
     def play(self, title):
         tracks = self.get_tracks(title)
-        playlist = []
        
         # Fetch all tracks and give the playlist to the player
         if tracks:
             for track in tracks: 
                 try:
-                    print "fetched " + track['title']
-                    playlist.append([ track['artist'],  track['title'], 
-                            self._api.get_stream_url(track['id'])])
+                    print("Now playing " + track['artist'] + " - " + track['title'])
+                    self._player.play(self._api.get_stream_url(track['id']))
                 except CallFailure as e:
-                    print e.errno
-                    print e.strerror
-                    
                     print("Can't extract streaming URL, please try again in a "
                             "few seconds")
-                    break
         else:
              print("Can't find track (use --nocache if you are "
                         "sure the track exists)")
             
-        self._player.start(playlist)
-
     def search(self, search):
         search = search.lower()
         tracks  = [track for track in self._library if
