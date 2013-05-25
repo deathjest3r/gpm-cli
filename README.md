@@ -33,8 +33,8 @@ Configuration
 -------------
 Configuration of gpm-cli is via `~/.gpmrc`. An example config looks like:
 
-            email <your gmailaddress>
-            password <your gmail password>
+    login <your gmailaddress>
+    password <your gmail password>
 
 You don't need to store both in the file you can also start gpm-cli without a
 config file. Then you have to login manually everytime you start it

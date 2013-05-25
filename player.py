@@ -47,8 +47,10 @@ class Player:
                     if(isinstance(self._proc, subprocess.Popen) and
                             self._proc.poll() != None):
                         self._proc.terminate()
+                    break
                 except OSError:
                     print "Can't close mplayer"
+                    break
 
     def play(self):
         if self._stop.isSet():

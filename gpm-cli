@@ -171,7 +171,10 @@ class GPM:
                     print "fetched " + track['title']
                     playlist.append([ track['artist'],  track['title'], 
                             self._api.get_stream_url(track['id'])])
-                except CallFailure:
+                except CallFailure as e:
+                    print e.errno
+                    print e.strerror
+                    
                     print("Can't extract streaming URL, please try again in a "
                             "few seconds")
                     break
