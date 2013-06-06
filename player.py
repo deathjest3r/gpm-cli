@@ -16,9 +16,13 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
 
-import os, sys
+import os, sys, time
 import subprocess
 import threading
+
+import pygst
+pygst.require("0.10")
+import gst
 
 class Player:
     def __init__(self, sound_dev = "alsa:device=hw=0.0"):
@@ -28,19 +32,14 @@ class Player:
 
     def play(self, track):
         try:
-            with open(os.devnull, 'w') as temp:
-                self._proc = subprocess.Popen(["mplayer", "-slave", "-ao",
-                        self.sound_dev, "%s" % track],
-                        stdin=subprocess.PIPE, stdout=temp, stderr=temp)
-                self._proc.wait()
+            player = gst.element_factory_make("playbin2", "player")
+            player.set_property("uri", track)
+            player.set_state(gst.STATE_PLAYING)
+            while True:
+                time.sleep(10)
         except KeyboardInterrupt:
-            try:
-                if(isinstance(self._proc, subprocess.Popen) and
-                        self._proc.poll() != None):
-                    self._proc.terminate()
-            except OSError:
-                print "Can't close mplayer"
-            sys.exit(0)
+            pass
+            #sys.exit(0)
     
     def pause(self):
         pass
