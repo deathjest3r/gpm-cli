@@ -40,7 +40,7 @@ class mediakeys(plugin):
             if keycode in keys:
                 # Play/Pause key
                 if keycode == 172:
-                    self._player.play()
+                    self._player.pause()
                 # Stop key
                 elif keycode == 174: 
                     self._player.stop()

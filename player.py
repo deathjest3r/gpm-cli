@@ -41,7 +41,10 @@ class Player:
             except OSError:
                 print "Can't close mplayer"
             sys.exit(0)
-        
+    
+    def pause(self):
+        pass
+
     def stop(self):
         try:
             if isinstance(self._proc, subprocess.Popen):

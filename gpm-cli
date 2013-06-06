@@ -42,9 +42,10 @@ class GPM:
         self._library = self.open_library()
 
     def __del__(self):
-        if self._plugins:
-            for plugin in self._plugins:
-                plugin.stop()
+        pass
+        #if self._plugins:
+        #    for plugin in self._plugins:
+        #        plugin.stop()
 
 
     def login(self, config):
