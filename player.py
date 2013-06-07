@@ -28,36 +28,32 @@ class Player:
     def __init__(self, sound_dev = "alsa:device=hw=0.0"):
         self._proc = None
         self.sound_dev = sound_dev
-        self._stop = threading.Event()
 
     def play(self, track):
         try:
-            player = gst.element_factory_make("playbin2", "player")
-            player.set_property("uri", track)
-            player.set_state(gst.STATE_PLAYING)
+            self._player = gst.element_factory_make("playbin2", "player")
+            self._player.set_property("uri", track)
+            self._player.set_state(gst.STATE_PLAYING)
+            self._state = 'play' 
             while True:
-                time.sleep(10)
+                if self._state != 'play':
+                    self._player.set_state(gst.STATE_NULL)
+                    return self._state
+                time.sleep(1)
         except KeyboardInterrupt:
-            pass
-            #sys.exit(0)
+            sys.exit(0)
     
     def pause(self):
-        pass
+        if self._player.get_state(0)[1] == gst.STATE_PLAYING:
+            self._player.set_state(gst.STATE_PAUSED)
+        else:
+            self._player.set_state(gst.STATE_PLAYING)
 
     def stop(self):
-        try:
-            if isinstance(self._proc, subprocess.Popen):
-                self._proc.communicate("stop\n")
-            self._stop.set()
-        except ValueError:
-            pass
+        self._state = 'stop'
 
     def next(self):
-        try:
-            if isinstance(self._proc, subprocess.Popen):
-                self._proc.terminate()
-        except OSError:
-            pass
+        self._state = 'next'
 
     def prev(self):
-        pass
+        self._state = 'prev'

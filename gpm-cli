@@ -130,8 +130,6 @@ class GPM:
                 self._plugins.append(plugin_inst)
                 plugin_inst.start()
         except ImportError, e:
-            #import traceback
-            #print traceback.format_exc(e)
             print "Can't run " + plugin + " plugin"
             sys.exit(0)
 
@@ -168,8 +166,16 @@ class GPM:
         if tracks:
             for track in tracks: 
                 try:
-                    print("Now playing " + track['artist'] + " - " + track['title'])
-                    self._player.play(self._api.get_stream_url(track['id']))
+                    while True:
+                        print("Now playing " + track['artist'] + " - " + track['title'])
+                        ret = self._player.play(self._api.get_stream_url(track['id']))
+                        if ret == 'prev':
+                            continue
+                        if ret == 'next':
+                            break
+                        if ret == 'stop':
+                            pass
+                        
                 except CallFailure as e:
                     print("Can't extract streaming URL, please try again in a "
                             "few seconds")
