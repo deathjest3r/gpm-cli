@@ -22,7 +22,7 @@ Requirements
 ------------
 * Python 2
 * gmusicapi
-* mplayer
+* Some Debian packages (python-xlib, python-gst0.10)
 * Some songs on Google Play Music
 
 Usage
@@ -44,9 +44,18 @@ Library
 The library is stored in `~/.gpm/library.db`. If you want to sync it with the
 online library just add `--sync` to the command line
 
+Plugins
+-------
+Plugins can be enabled by adding the following string to the command
+    
+    ./gpm-cli play "Test | Test" --plugins mediakeys
+
+At the moment the `mediakeys` plugin is the only working plugin. It allows to
+start/stop/pause playback on Lenovo Thinkpads. More plugins are coming the
+future.
+
 ToDo
 ----
-* Add Media Keys to start/pause/skip tracks
 * Add Last.FM plugin
 * Sort tracks correcly (by track number)
 * Bundle pip package
